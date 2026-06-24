@@ -2,11 +2,21 @@
 
 use eframe::egui;
 use egui::{Color32, Key, Modifiers, RichText, ScrollArea, TextEdit, TextStyle};
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use rfd::FileDialog;
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicIsize, Ordering},
+    },
+    thread,
+    time::Duration,
+};
 use tray_icon::{
     Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent,
-    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
 };
 
 const APP_NAME: &str = "egui-text-editor";
@@ -32,17 +42,53 @@ fn main() -> eframe::Result<()> {
     let toggle_id = toggle_item.id().clone();
     let quit_id = quit_item.id().clone();
 
+    let hwnd_shared = Arc::new(AtomicIsize::new(0));
+    let quit_requested = Arc::new(AtomicBool::new(false));
+
+    // Background thread: poll tray/menu events and act directly via Win32.
+    // Runs even when the window is hidden, solving the "eframe stops updating
+    // when SW_HIDE'd" problem.
+    {
+        let hwnd_shared = hwnd_shared.clone();
+        let quit_requested = quit_requested.clone();
+        thread::spawn(move || loop {
+            let hwnd = hwnd_shared.load(Ordering::Relaxed);
+            if hwnd != 0 {
+                while let Ok(ev) = MenuEvent::receiver().try_recv() {
+                    if ev.id == toggle_id {
+                        unsafe { os_toggle(hwnd) };
+                    } else if ev.id == quit_id {
+                        quit_requested.store(true, Ordering::Relaxed);
+                        // Show the window so update() runs and handles quit logic.
+                        unsafe { os_hide_show(hwnd, true) };
+                    }
+                }
+                while let Ok(ev) = TrayIconEvent::receiver().try_recv() {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = ev
+                    {
+                        unsafe { os_toggle(hwnd) };
+                    }
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        });
+    }
+
     eframe::run_native(
         APP_NAME,
         eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default().with_inner_size([900.0, 650.0]),
             ..Default::default()
         },
-        Box::new(|cc| {
+        Box::new(move |cc| {
             let mut style = (*cc.egui_ctx.style()).clone();
             style.text_styles.insert(TextStyle::Monospace, egui::FontId::monospace(14.0));
             cc.egui_ctx.set_style(style);
-            Ok(Box::new(App::new(toggle_id, quit_id)))
+            Ok(Box::new(App::new(hwnd_shared, quit_requested)))
         }),
     )
 }
@@ -63,21 +109,21 @@ struct App {
     current_path: Option<PathBuf>,
     modified: bool,
     dialog: Option<Dialog>,
-    visible: bool,
-    toggle_id: MenuId,
-    quit_id: MenuId,
+    hwnd: isize,
+    hwnd_shared: Arc<AtomicIsize>,
+    quit_requested: Arc<AtomicBool>,
 }
 
 impl App {
-    fn new(toggle_id: MenuId, quit_id: MenuId) -> Self {
+    fn new(hwnd_shared: Arc<AtomicIsize>, quit_requested: Arc<AtomicBool>) -> Self {
         Self {
             content: String::new(),
             current_path: None,
             modified: false,
             dialog: None,
-            visible: true,
-            toggle_id,
-            quit_id,
+            hwnd: 0,
+            hwnd_shared,
+            quit_requested,
         }
     }
 
@@ -152,53 +198,37 @@ impl App {
         }
     }
 
-    fn toggle_visible(&mut self, ctx: &egui::Context) {
-        self.visible = !self.visible;
-        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(self.visible));
-        if self.visible {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+    fn os_hide(&self) {
+        if self.hwnd != 0 {
+            unsafe { os_hide_show(self.hwnd, false) };
         }
     }
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Close button → hide to tray
-        if ctx.input(|i| i.viewport().close_requested()) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            self.visible = false;
-            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
-        }
-
-        // Poll tray / menu events
-        let mut tray_quit = false;
-        if let Ok(ev) = MenuEvent::receiver().try_recv() {
-            if ev.id == self.toggle_id {
-                self.toggle_visible(ctx);
-            } else if ev.id == self.quit_id {
-                if self.modified {
-                    self.dialog = Some(Dialog::Discard(PendingAction::Quit));
-                } else {
-                    tray_quit = true;
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Capture HWND on first frame and share with the tray background thread.
+        if self.hwnd == 0 {
+            if let Ok(handle) = frame.window_handle() {
+                if let RawWindowHandle::Win32(h) = handle.as_raw() {
+                    self.hwnd = h.hwnd.get();
+                    self.hwnd_shared.store(self.hwnd, Ordering::Relaxed);
                 }
             }
         }
-        if let Ok(TrayIconEvent::Click {
-            button: MouseButton::Left,
-            button_state: MouseButtonState::Up,
-            ..
-        }) = TrayIconEvent::receiver().try_recv()
-        {
-            self.toggle_visible(ctx);
+
+        // Close button → hide to tray.
+        if ctx.input(|i| i.viewport().close_requested()) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.os_hide();
         }
-        if tray_quit {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-            return;
-        }
+
+        // Quit requested from tray menu (background thread set this, then showed window).
+        let tray_quit = self.quit_requested.swap(false, Ordering::Relaxed);
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
 
-        // Keyboard shortcuts — consume regardless so editor never sees them
+        // Keyboard shortcuts — consume before the editor sees them.
         let new_key = ctx.input_mut(|i| i.consume_key(Modifiers::CTRL, Key::N));
         let open_key = ctx.input_mut(|i| i.consume_key(Modifiers::CTRL, Key::O));
         let save_as_key =
@@ -279,24 +309,15 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
-                    if ui
-                        .add(egui::Button::new("New").shortcut_text("Ctrl+N"))
-                        .clicked()
-                    {
+                    if ui.add(egui::Button::new("New").shortcut_text("Ctrl+N")).clicked() {
                         menu_new = true;
                         ui.close_menu();
                     }
-                    if ui
-                        .add(egui::Button::new("Open…").shortcut_text("Ctrl+O"))
-                        .clicked()
-                    {
+                    if ui.add(egui::Button::new("Open…").shortcut_text("Ctrl+O")).clicked() {
                         menu_open = true;
                         ui.close_menu();
                     }
-                    if ui
-                        .add(egui::Button::new("Save").shortcut_text("Ctrl+S"))
-                        .clicked()
-                    {
+                    if ui.add(egui::Button::new("Save").shortcut_text("Ctrl+S")).clicked() {
                         menu_save = true;
                         ui.close_menu();
                     }
@@ -308,10 +329,7 @@ impl eframe::App for App {
                         ui.close_menu();
                     }
                     ui.separator();
-                    if ui
-                        .add(egui::Button::new("Quit").shortcut_text("Ctrl+Q"))
-                        .clicked()
-                    {
+                    if ui.add(egui::Button::new("Quit").shortcut_text("Ctrl+Q")).clicked() {
                         menu_quit = true;
                         ui.close_menu();
                     }
@@ -319,8 +337,15 @@ impl eframe::App for App {
             });
         });
 
-        // Process actions — skip if a dialog is open
+        // Process actions — skip if a dialog is open.
         if !has_dialog {
+            if tray_quit || menu_quit || quit_key {
+                if self.modified {
+                    self.dialog = Some(Dialog::Discard(PendingAction::Quit));
+                } else {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+            }
             if menu_new || new_key {
                 self.request_file_action(PendingAction::New);
             }
@@ -332,13 +357,6 @@ impl eframe::App for App {
             }
             if menu_save_as || save_as_key {
                 self.do_save(true);
-            }
-            if menu_quit || quit_key {
-                if self.modified {
-                    self.dialog = Some(Dialog::Discard(PendingAction::Quit));
-                } else {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                }
             }
         }
 
@@ -352,7 +370,6 @@ impl eframe::App for App {
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.horizontal_top(|ui| {
-                        // Line numbers gutter
                         ui.vertical(|ui| {
                             ui.set_min_width(48.0);
                             ui.set_max_width(48.0);
@@ -366,7 +383,6 @@ impl eframe::App for App {
                             }
                         });
                         ui.separator();
-                        // Text area
                         let avail_w = ui.available_width();
                         let response = ui.add(
                             TextEdit::multiline(&mut self.content)
@@ -381,8 +397,28 @@ impl eframe::App for App {
                     });
                 });
         });
-
-        // Keep polling for tray events between input events
-        ctx.request_repaint_after(Duration::from_millis(50));
     }
+}
+
+// Hide/show at the Win32 level — eframe's event loop keeps running regardless.
+unsafe fn os_hide_show(hwnd: isize, show: bool) {
+    unsafe extern "system" {
+        fn ShowWindow(hwnd: isize, cmd: i32) -> i32;
+        fn SetForegroundWindow(hwnd: isize) -> i32;
+    }
+    if show {
+        unsafe {
+            ShowWindow(hwnd, 9); // SW_RESTORE (handles SW_HIDE'd windows)
+            SetForegroundWindow(hwnd);
+        }
+    } else {
+        unsafe { ShowWindow(hwnd, 0) }; // SW_HIDE
+    }
+}
+
+unsafe fn os_toggle(hwnd: isize) {
+    unsafe extern "system" {
+        fn IsWindowVisible(hwnd: isize) -> i32;
+    }
+    unsafe { os_hide_show(hwnd, IsWindowVisible(hwnd) == 0) };
 }

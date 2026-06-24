@@ -1057,6 +1057,7 @@ name = "egui-text-editor"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "raw-window-handle",
  "rfd",
  "tray-icon",
 ]
