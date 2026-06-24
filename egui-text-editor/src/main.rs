@@ -112,6 +112,7 @@ struct App {
     hwnd: isize,
     hwnd_shared: Arc<AtomicIsize>,
     quit_requested: Arc<AtomicBool>,
+    quitting: bool,
 }
 
 impl App {
@@ -124,6 +125,7 @@ impl App {
             hwnd: 0,
             hwnd_shared,
             quit_requested,
+            quitting: false,
         }
     }
 
@@ -217,8 +219,8 @@ impl eframe::App for App {
             }
         }
 
-        // Close button → hide to tray.
-        if ctx.input(|i| i.viewport().close_requested()) {
+        // Close button → hide to tray (unless we initiated the close ourselves).
+        if ctx.input(|i| i.viewport().close_requested()) && !self.quitting {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             self.os_hide();
         }
@@ -296,6 +298,7 @@ impl eframe::App for App {
             self.dialog = None;
         }
         if do_quit {
+            self.quitting = true;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
@@ -343,6 +346,7 @@ impl eframe::App for App {
                 if self.modified {
                     self.dialog = Some(Dialog::Discard(PendingAction::Quit));
                 } else {
+                    self.quitting = true;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
