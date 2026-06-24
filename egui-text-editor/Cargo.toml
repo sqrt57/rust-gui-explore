@@ -1,0 +1,9 @@
+[package]
+name = "egui-text-editor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.29"
+rfd = "0.15"
+tray-icon = "0.14"

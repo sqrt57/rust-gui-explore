@@ -7,6 +7,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | Crate | Toolkit | Description |
 |-------|---------|-------------|
 | [fltk-text-editor](fltk-text-editor/) | [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Minimal text editor with system-tray hide/restore |
+| [egui-text-editor](egui-text-editor/) | [egui](https://github.com/emilk/egui) / eframe | Same app re-implemented with egui |
 
 ## Frameworks on the radar
 
