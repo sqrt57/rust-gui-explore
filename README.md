@@ -21,6 +21,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [gtk-rs](https://gtk-rs.org) | GTK 4 bindings | Mature; best on Linux; lower-level |
 | [Xilem](https://github.com/linebender/xilem) | SwiftUI/Flutter-inspired | Experimental; API unstable |
 | [floem](https://github.com/lapce/floem) | Reactive, lightweight | Early-stage; from the Lapce editor team |
+| [windows-rs](https://github.com/microsoft/windows-rs) | Raw Win32 API | Maximum control; Windows-only; verbose but no abstraction overhead |
 
 ## Goals
 
