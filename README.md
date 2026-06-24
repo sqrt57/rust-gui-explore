@@ -22,6 +22,8 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [Xilem](https://github.com/linebender/xilem) | SwiftUI/Flutter-inspired | Experimental; API unstable |
 | [floem](https://github.com/lapce/floem) | Reactive, lightweight | Early-stage; from the Lapce editor team |
 | [windows-rs](https://github.com/microsoft/windows-rs) | Raw Win32 API | Maximum control; Windows-only; verbose but no abstraction overhead |
+| windows-rs + Direct2D/DirectWrite | Custom-rendered UI (Windows) | Hardware-accelerated 2D drawing and text; no widget system |
+| windows-rs + WinRT / Windows App SDK | Modern native Windows UI | Microsoft's current recommended path; WinUI 3 widgets; COM-based |
 
 ## Goals
 
