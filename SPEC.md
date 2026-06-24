@@ -1,22 +1,21 @@
-# fltk-text-editor — spec
+# Text editor — spec
 
-Derived from the current implementation.
+A minimal plain-text editor with system-tray integration.
 
 ## Window
 
-- Size: 900 × 650, resizable
-- GTK scheme (`app::Scheme::Gtk`)
+- Default size: 900 × 650, resizable
 - Title bar format:
-  - No file open: `fltk-text-editor`
-  - File open, unmodified: `filename — fltk-text-editor`
-  - File open, modified: `• filename — fltk-text-editor`
-  - No file, modified: `• Untitled — fltk-text-editor`
+  - No file open: `<app name>`
+  - File open, unmodified: `filename — <app name>`
+  - File open, modified: `• filename — <app name>`
+  - No file, modified: `• Untitled — <app name>`
 
 ## Layout
 
 ```
 ┌─────────────────────────────┐
-│ Menu bar (full width, 25px) │
+│ Menu bar (full width)       │
 ├─────────────────────────────┤
 │                             │
 │  Text editor (remainder)    │
@@ -28,9 +27,9 @@ Both regions resize with the window.
 
 ## Text editor
 
-- Font: Courier (monospace), 14 pt
-- Line numbers: 48 px gutter
-- Word wrap: at window bounds
+- Monospace font, ~14 pt
+- Line number gutter
+- Word wrap at window bounds
 
 ## File menu
 
@@ -45,7 +44,7 @@ Both regions resize with the window.
 
 ## Unsaved-changes guard
 
-Any file operation that would discard edits (New, Open, Quit) shows a modal dialog:
+Any operation that would discard edits (New, Open, Quit) shows a modal dialog:
 
 > "You have unsaved changes. Discard them?"
 > `[Cancel]` `[Discard]`
@@ -54,8 +53,8 @@ Proceeding requires explicit "Discard". Cancelling aborts the operation.
 
 ## System tray
 
-- Icon: solid blue 32 × 32 px square (RGBA `#268bd2`)
-- Tooltip: `fltk-text-editor`
+- Icon: solid blue 32 × 32 px (`#268bd2`)
+- Tooltip: app name
 - Tray menu:
   - **Show / Hide** — toggle window visibility
   - *(separator)*
@@ -63,12 +62,8 @@ Proceeding requires explicit "Discard". Cancelling aborts the operation.
 
 ## Close button
 
-Clicking the window's × button hides the window to the tray instead of quitting.
+Clicking × hides the window to the tray instead of quitting.
 
 ## Tray icon click
 
 Left-click on the tray icon toggles window visibility (same as Show / Hide menu item).
-
-## Window hide / show
-
-Hiding and showing is done via Win32 `ShowWindow` / `IsWindowVisible` / `SetForegroundWindow` rather than FLTK's `Window::hide()`, to keep the FLTK event loop alive while the window is invisible.
