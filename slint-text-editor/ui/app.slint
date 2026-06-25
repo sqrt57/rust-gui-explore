@@ -1,0 +1,261 @@
+import { Button, TextEdit, ScrollView, VerticalBox } from "std-widgets.slint";
+
+component MenuItemButton inherits Rectangle {
+    in property <string> label;
+    in property <string> shortcut-hint;
+    callback clicked();
+
+    height: 26px;
+    border-radius: 3px;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    background: touch.has-hover ? #0078d440 : transparent;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 0px;
+
+        Text {
+            text: root.label;
+            font-size: 13px;
+            horizontal-alignment: left;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: root.shortcut-hint;
+            font-size: 11px;
+            color: #888888;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component ModalDialog inherits Rectangle {
+    in property <string> message;
+    in property <bool> has-cancel: false;
+    callback confirmed();
+    callback cancelled();
+
+    background: #00000066;
+
+    TouchArea {} // eat clicks behind dialog
+
+    VerticalLayout {
+        alignment: center;
+
+        Rectangle {
+            width: 340px;
+            height: dialog-col.preferred-height + 40px;
+            background: #2b2b2b;
+            border-radius: 6px;
+            border-color: #555;
+            border-width: 1px;
+            drop-shadow-color: #000000aa;
+            drop-shadow-blur: 12px;
+            drop-shadow-offset-y: 4px;
+
+            dialog-col := VerticalLayout {
+                padding: 20px;
+                spacing: 16px;
+
+                Text {
+                    text: root.message;
+                    wrap: word-wrap;
+                    horizontal-alignment: left;
+                    color: #dddddd;
+                }
+
+                HorizontalLayout {
+                    alignment: end;
+                    spacing: 8px;
+
+                    if root.has-cancel : Button {
+                        text: "Cancel";
+                        clicked => { root.cancelled(); }
+                    }
+
+                    Button {
+                        text: root.has-cancel ? "Discard" : "OK";
+                        clicked => { root.confirmed(); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    preferred-width: 900px;
+    preferred-height: 650px;
+    default-font-size: 13px;
+
+    in-out property <string> window-title: "slint-text-editor";
+    title: root.window-title;
+
+    in-out property <string> editor-text: "";
+    in-out property <string> line-numbers-text: "   1";
+
+    in-out property <bool> show-discard-dialog: false;
+    in-out property <bool> show-error-dialog: false;
+    in-out property <string> error-message: "";
+    in-out property <bool> editor-enabled: true;
+
+    callback text-edited(string);
+    callback new-file();
+    callback open-file();
+    callback save-file();
+    callback save-file-as();
+    callback quit();
+    callback discard-confirmed();
+    callback discard-cancelled();
+    callback error-dismissed();
+
+    forward-focus: key-scope;
+
+    key-scope := FocusScope {
+        key-pressed(e) => {
+            if e.modifiers.control && !e.modifiers.shift {
+                if e.text == "n" { root.new-file(); return accept; }
+                if e.text == "o" { root.open-file(); return accept; }
+                if e.text == "s" { root.save-file(); return accept; }
+                if e.text == "q" { root.quit(); return accept; }
+            }
+            if e.modifiers.control && e.modifiers.shift {
+                if e.text == "S" || e.text == "s" { root.save-file-as(); return accept; }
+            }
+            reject
+        }
+
+        VerticalLayout {
+            // ── Menu bar ────────────────────────────────────────────────────
+            Rectangle {
+                height: 28px;
+                border-color: #55555533;
+                border-width: 1px;
+                background: transparent;
+
+                HorizontalLayout {
+                    alignment: start;
+                    padding-left: 4px;
+                    padding-top: 2px;
+                    padding-bottom: 2px;
+
+                    Button {
+                        text: "File";
+                        height: 24px;
+                        clicked => { file-popup.show(); }
+                    }
+                }
+            }
+
+            // ── Editor row ──────────────────────────────────────────────────
+            HorizontalLayout {
+                // Line number gutter
+                Rectangle {
+                    width: 52px;
+                    border-color: #88888833;
+                    border-width: 1px;
+                    clip: true;
+
+                    Text {
+                        text: root.line-numbers-text;
+                        font-family: "Courier New";
+                        font-size: 14px;
+                        color: #888888;
+                        vertical-alignment: top;
+                        horizontal-alignment: right;
+                        x: 0px;
+                        y: 4px;
+                        width: parent.width - 6px;
+                    }
+                }
+
+                TextEdit {
+                    text <=> root.editor-text;
+                    font-family: "Courier New";
+                    font-size: 14px;
+                    enabled: root.editor-enabled;
+                    edited(t) => { root.text-edited(t); }
+                }
+            }
+        }
+    }
+
+    // ── File menu popup ──────────────────────────────────────────────────────
+    file-popup := PopupWindow {
+        x: 4px;
+        y: 28px;
+        width: 230px;
+        height: 164px;
+        close-policy: no-auto-close;
+
+        Rectangle {
+            border-radius: 4px;
+            border-color: #88888888;
+            border-width: 1px;
+            background: #2b2b2b;
+            drop-shadow-color: #00000066;
+            drop-shadow-blur: 8px;
+            drop-shadow-offset-y: 2px;
+
+            VerticalLayout {
+                padding: 4px;
+                spacing: 1px;
+
+                MenuItemButton {
+                    label: "New";
+                    shortcut-hint: "Ctrl+N";
+                    clicked => { file-popup.close(); root.new-file(); }
+                }
+                MenuItemButton {
+                    label: "Open…";
+                    shortcut-hint: "Ctrl+O";
+                    clicked => { file-popup.close(); root.open-file(); }
+                }
+                MenuItemButton {
+                    label: "Save";
+                    shortcut-hint: "Ctrl+S";
+                    clicked => { file-popup.close(); root.save-file(); }
+                }
+                MenuItemButton {
+                    label: "Save As…";
+                    shortcut-hint: "Ctrl+Shift+S";
+                    clicked => { file-popup.close(); root.save-file-as(); }
+                }
+
+                Rectangle { height: 1px; background: #555555; }
+
+                MenuItemButton {
+                    label: "Quit";
+                    shortcut-hint: "Ctrl+Q";
+                    clicked => { file-popup.close(); root.quit(); }
+                }
+            }
+        }
+    }
+
+    // ── Discard-changes dialog ───────────────────────────────────────────────
+    if root.show-discard-dialog : ModalDialog {
+        width: 100%;
+        height: 100%;
+        message: "You have unsaved changes. Discard them?";
+        has-cancel: true;
+        confirmed => { root.discard-confirmed(); }
+        cancelled => { root.discard-cancelled(); }
+    }
+
+    // ── Error dialog ─────────────────────────────────────────────────────────
+    if root.show-error-dialog : ModalDialog {
+        width: 100%;
+        height: 100%;
+        message: root.error-message;
+        has-cancel: false;
+        confirmed => { root.error-dismissed(); }
+    }
+}
