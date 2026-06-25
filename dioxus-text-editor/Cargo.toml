@@ -1,0 +1,9 @@
+[package]
+name = "dioxus-text-editor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dioxus = { version = "0.6", features = ["desktop"] }
+tray-icon = "0.19"
+rfd = "0.15"
