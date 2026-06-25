@@ -8,6 +8,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 |-------|---------|-------------|
 | [fltk-text-editor](fltk-text-editor/) | [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Minimal text editor with system-tray hide/restore |
 | [egui-text-editor](egui-text-editor/) | [egui](https://github.com/emilk/egui) / eframe | Same app re-implemented with egui |
+| [iced-text-editor](iced-text-editor/) | [iced](https://github.com/iced-rs/iced) | Same app re-implemented with iced (Elm architecture) |
 
 ## Frameworks on the radar
 
