@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>tauri-text-editor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      background: #fff;
+    }
+
+    body { display: flex; flex-direction: column; }
+
+    /* ── Menu bar ── */
+    #menubar {
+      display: flex;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .menu { position: relative; }
+
+    .menu-title {
+      display: block;
+      padding: 5px 14px;
+      cursor: default;
+      font-size: 13px;
+    }
+
+    .menu-title:hover, .menu-title.active {
+      background: #0078d4;
+      color: white;
+    }
+
+    .menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      border: 1px solid #bbb;
+      min-width: 220px;
+      z-index: 1000;
+      box-shadow: 2px 4px 10px rgba(0,0,0,0.2);
+      padding: 3px 0;
+    }
+
+    .menu.open .menu-dropdown { display: block; }
+
+    .menu-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 16px;
+      cursor: default;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .menu-item:hover { background: #0078d4; color: white; }
+
+    .menu-item .shortcut {
+      font-size: 11px;
+      color: #999;
+      margin-left: 28px;
+    }
+
+    .menu-item:hover .shortcut { color: #cce4ff; }
+
+    .menu-separator {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 3px 0;
+    }
+
+    /* ── Editor ── */
+    #editor-wrap {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    #line-numbers {
+      padding: 4px 8px;
+      min-width: 52px;
+      background: #f7f7f7;
+      border-right: 1px solid #ddd;
+      color: #bbb;
+      text-align: right;
+      overflow: hidden;
+      white-space: pre;
+      user-select: none;
+      flex-shrink: 0;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
+
+    #editor {
+      flex: 1;
+      padding: 4px 8px;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      word-wrap: break-word;
+      overflow-y: scroll;
+      overflow-x: auto;
+      tab-size: 4;
+    }
+
+    /* ── Modals ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.visible { display: flex; }
+
+    .dialog {
+      background: white;
+      border-radius: 6px;
+      padding: 24px 28px;
+      width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .dialog-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .dialog-msg {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 6px 18px;
+      font-size: 13px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      cursor: pointer;
+      background: white;
+    }
+
+    .btn:hover { background: #f0f0f0; }
+
+    .btn-danger { background: #c0392b; color: white; border-color: #c0392b; }
+    .btn-danger:hover { background: #a93226; }
+  </style>
+</head>
+<body>
+
+<div id="menubar">
+  <div class="menu" id="file-menu">
+    <span class="menu-title" id="file-menu-title">File</span>
+    <div class="menu-dropdown">
+      <div class="menu-item" data-action="new">New <span class="shortcut">Ctrl+N</span></div>
+      <div class="menu-item" data-action="open">Open… <span class="shortcut">Ctrl+O</span></div>
+      <div class="menu-item" data-action="save">Save <span class="shortcut">Ctrl+S</span></div>
+      <div class="menu-item" data-action="save-as">Save As… <span class="shortcut">Ctrl+Shift+S</span></div>
+      <div class="menu-separator"></div>
+      <div class="menu-item" data-action="quit">Quit <span class="shortcut">Ctrl+Q</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="editor-wrap">
+  <div id="line-numbers"></div>
+  <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+</div>
+
+<!-- Discard dialog -->
+<div class="overlay" id="discard-overlay">
+  <div class="dialog">
+    <div class="dialog-title">Unsaved Changes</div>
+    <div class="dialog-msg">You have unsaved changes. Discard them?</div>
+    <div class="dialog-buttons">
+      <button class="btn" id="btn-cancel">Cancel</button>
+      <button class="btn btn-danger" id="btn-discard">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error dialog -->
+<div class="overlay" id="error-overlay">
+  <div class="dialog">
+    <div class="dialog-title">Error</div>
+    <div class="dialog-msg" id="error-msg"></div>
+    <div class="dialog-buttons">
+      <button class="btn" id="btn-error-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const APP_NAME = 'tauri-text-editor';
+
+const editor = document.getElementById('editor');
+const lineNums = document.getElementById('line-numbers');
+const discardOverlay = document.getElementById('discard-overlay');
+const errorOverlay = document.getElementById('error-overlay');
+const errorMsg = document.getElementById('error-msg');
+
+let modified = false;
+let currentPath = null;
+let pendingAction = null; // 'new' | 'open' | 'quit'
+
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+
+// ── Title ──────────────────────────────────────────────────────────────────
+function updateTitle() {
+  const filename = currentPath
+    ? currentPath.replace(/\\/g, '/').split('/').pop()
+    : 'Untitled';
+  if (modified) {
+    document.title = `• ${filename} — ${APP_NAME}`;
+  } else if (currentPath) {
+    document.title = `${filename} — ${APP_NAME}`;
+  } else {
+    document.title = APP_NAME;
+  }
+  invoke('update_state', { modified, path: currentPath });
+}
+
+// ── Line numbers ───────────────────────────────────────────────────────────
+function updateLineNumbers() {
+  const count = Math.max(editor.value.split('\n').length, 1);
+  lineNums.textContent = Array.from({ length: count }, (_, i) =>
+    String(i + 1).padStart(4, ' ')
+  ).join('\n');
+}
+
+// ── Editor events ──────────────────────────────────────────────────────────
+editor.addEventListener('input', () => {
+  if (!modified) {
+    modified = true;
+    updateTitle();
+  }
+  updateLineNumbers();
+});
+
+editor.addEventListener('scroll', () => {
+  lineNums.scrollTop = editor.scrollTop;
+});
+
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = editor.selectionStart;
+    editor.value = editor.value.slice(0, s) + '\t' + editor.value.slice(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = s + 1;
+    editor.dispatchEvent(new Event('input'));
+  }
+});
+
+// ── Menu ───────────────────────────────────────────────────────────────────
+const fileMenu = document.getElementById('file-menu');
+const fileMenuTitle = document.getElementById('file-menu-title');
+
+fileMenuTitle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = fileMenu.classList.toggle('open');
+  fileMenuTitle.classList.toggle('active', open);
+});
+
+document.addEventListener('click', () => {
+  fileMenu.classList.remove('open');
+  fileMenuTitle.classList.remove('active');
+});
+
+document.querySelectorAll('.menu-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileMenu.classList.remove('open');
+    fileMenuTitle.classList.remove('active');
+    handleAction(item.dataset.action);
+  });
+});
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (!e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'n') { e.preventDefault(); handleAction('new'); }
+  else if (k === 'o') { e.preventDefault(); handleAction('open'); }
+  else if (k === 's') { e.preventDefault(); handleAction(e.shiftKey ? 'save-as' : 'save'); }
+  else if (k === 'q') { e.preventDefault(); handleAction('quit'); }
+});
+
+// ── Action dispatch ────────────────────────────────────────────────────────
+function handleAction(action) {
+  if (action === 'new') {
+    modified ? showDiscard('new') : doNew();
+  } else if (action === 'open') {
+    modified ? showDiscard('open') : doOpen();
+  } else if (action === 'save') {
+    doSave(false);
+  } else if (action === 'save-as') {
+    doSave(true);
+  } else if (action === 'quit') {
+    modified ? showDiscard('quit') : doQuit();
+  }
+}
+
+function doNew() {
+  editor.value = '';
+  modified = false;
+  currentPath = null;
+  updateTitle();
+  updateLineNumbers();
+}
+
+async function doOpen() {
+  try {
+    const path = await invoke('show_open_dialog');
+    if (!path) return;
+    const text = await invoke('read_file', { path });
+    editor.value = text;
+    currentPath = path;
+    modified = false;
+    updateTitle();
+    updateLineNumbers();
+  } catch (e) {
+    showError(String(e));
+  }
+}
+
+async function doSave(forceDialog) {
+  try {
+    let path = forceDialog ? null : currentPath;
+    if (!path) {
+      const filename = currentPath
+        ? currentPath.replace(/\\/g, '/').split('/').pop()
+        : null;
+      path = await invoke('show_save_dialog', { filename });
+      if (!path) return;
+    }
+    await invoke('write_file', { path, content: editor.value });
+    currentPath = path;
+    modified = false;
+    updateTitle();
+  } catch (e) {
+    showError(String(e));
+  }
+}
+
+function doQuit() {
+  invoke('quit_app');
+}
+
+// ── Discard dialog ─────────────────────────────────────────────────────────
+function showDiscard(action) {
+  pendingAction = action;
+  discardOverlay.classList.add('visible');
+  editor.disabled = true;
+}
+
+function hideDiscard() {
+  discardOverlay.classList.remove('visible');
+  editor.disabled = false;
+  pendingAction = null;
+}
+
+document.getElementById('btn-cancel').addEventListener('click', hideDiscard);
+
+document.getElementById('btn-discard').addEventListener('click', () => {
+  const action = pendingAction;
+  hideDiscard();
+  if (action === 'new') doNew();
+  else if (action === 'open') doOpen();
+  else if (action === 'quit') doQuit();
+});
+
+// ── Error dialog ───────────────────────────────────────────────────────────
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorOverlay.classList.add('visible');
+  editor.disabled = true;
+}
+
+document.getElementById('btn-error-ok').addEventListener('click', () => {
+  errorOverlay.classList.remove('visible');
+  editor.disabled = false;
+});
+
+// ── Tray quit event ────────────────────────────────────────────────────────
+window.__TAURI__.event.listen('tray-quit', () => {
+  modified ? showDiscard('quit') : doQuit();
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+updateLineNumbers();
+updateTitle();
+</script>
+</body>
+</html>
