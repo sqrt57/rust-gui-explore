@@ -12,6 +12,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [slint-text-editor](slint-text-editor/) | [Slint](https://slint.dev) | Text editor — declarative .slint markup + Rust callbacks |
 | [tauri-text-editor](tauri-text-editor/) | [Tauri](https://tauri.app) | Text editor — WebView2 frontend + Rust command layer |
 | [dioxus-text-editor](dioxus-text-editor/) | [Dioxus](https://dioxuslabs.com) | Text editor — React-like signals, WebView desktop |
+| [win32-text-editor](win32-text-editor/) | [windows-rs](https://github.com/microsoft/windows-rs) | Text editor — raw Win32 API, WndProc message loop |
 
 ## Frameworks on the radar
 
@@ -26,7 +27,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [gtk-rs](https://gtk-rs.org) | GTK 4 bindings | Mature; best on Linux; lower-level |
 | [Xilem](https://github.com/linebender/xilem) | SwiftUI/Flutter-inspired | Experimental; API unstable |
 | [floem](https://github.com/lapce/floem) | Reactive, lightweight | Early-stage; from the Lapce editor team |
-| [windows-rs](https://github.com/microsoft/windows-rs) | Raw Win32 API | Maximum control; Windows-only; verbose but no abstraction overhead |
+| [windows-rs](https://github.com/microsoft/windows-rs) | Raw Win32 API | ✓ done — maximum control; WndProc + EDIT controls + Shell_NotifyIcon; zero runtime overhead |
 | windows-rs + Direct2D/DirectWrite | Custom-rendered UI (Windows) | Hardware-accelerated 2D drawing and text; no widget system |
 | windows-rs + WinRT / Windows App SDK | Modern native Windows UI | Microsoft's current recommended path; WinUI 3 widgets; COM-based |
 
