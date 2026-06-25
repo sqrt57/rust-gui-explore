@@ -11,6 +11,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [iced-text-editor](iced-text-editor/) | [iced](https://github.com/iced-rs/iced) | Same app re-implemented with iced (Elm architecture) |
 | [slint-text-editor](slint-text-editor/) | [Slint](https://slint.dev) | Same app re-implemented with Slint (declarative .slint markup) |
 | [tauri-text-editor](tauri-text-editor/) | [Tauri](https://tauri.app) | Same app re-implemented with Tauri (WebView2 + Rust backend) |
+| [dioxus-text-editor](dioxus-text-editor/) | [Dioxus](https://dioxuslabs.com) | Same app re-implemented with Dioxus (React-like components, WebView desktop) |
 
 ## Frameworks on the radar
 
@@ -21,7 +22,6 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [iced](https://github.com/iced-rs/iced) | Elm-inspired, declarative | Production-ready; powers System76's COSMIC desktop |
 | [Slint](https://slint.dev) | Declarative with own markup | Native rendering; commercial license for closed-source |
 | [Tauri](https://tauri.app) | WebView + Rust backend | Best fit if you want a web frontend; small binaries |
-| [Dioxus](https://dioxuslabs.com) | React-like components | Desktop + web + mobile from one codebase |
 | [gtk-rs](https://gtk-rs.org) | GTK 4 bindings | Mature; best on Linux; lower-level |
 | [Xilem](https://github.com/linebender/xilem) | SwiftUI/Flutter-inspired | Experimental; API unstable |
 | [floem](https://github.com/lapce/floem) | Reactive, lightweight | Early-stage; from the Lapce editor team |

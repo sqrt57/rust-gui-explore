@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository structure
 
-Five independent crates, each a self-contained binary implementing the same text editor spec (`SPEC.md`). There is no workspace — each crate has its own `Cargo.toml` and `Cargo.lock`. Work inside one crate at a time.
+Six independent crates, each a self-contained binary implementing the same text editor spec (`SPEC.md`). There is no workspace — each crate has its own `Cargo.toml` and `Cargo.lock`. Work inside one crate at a time.
 
 | Crate | Framework | Architecture |
 |-------|-----------|--------------|
@@ -13,6 +13,7 @@ Five independent crates, each a self-contained binary implementing the same text
 | `iced-text-editor` | iced 0.13 | Elm MVU, subscriptions + async Tasks |
 | `slint-text-editor` | Slint 1.x | Declarative `.slint` markup + Rust callbacks |
 | `tauri-text-editor` | Tauri 2.x | WebView2 frontend (HTML/JS) + Rust command layer |
+| `dioxus-text-editor` | Dioxus 0.6 | React-like signals + WebView (Wry) desktop |
 
 ## Build and run
 
@@ -30,6 +31,8 @@ cargo run --release    # release build (no console; windows_subsystem = "windows
 **slint-text-editor** has a two-stage build: `build.rs` compiles `ui/app.slint` → generates Rust code → binary compiles. The generated type `AppWindow` is imported via `slint::include_modules!()`.
 
 **tauri-text-editor** has a different layout: `src-tauri/` holds the Rust crate; `frontend/index.html` is the HTML/JS UI. Run from `src-tauri/`: `cargo run`. The `frontendDist` in `tauri.conf.json` points to `../frontend` — keeping it in a subdirectory prevents `tauri::generate_context!()` from scanning the `target/` directory. `gen/` (Tauri-generated capability schemas) is gitignored.
+
+**dioxus-text-editor** uses Dioxus 0.6 desktop, which renders into a Wry WebView. Run from `dioxus-text-editor/`: `cargo run`.
 
 There are no tests and no lint scripts beyond `cargo check` / `cargo clippy`.
 
@@ -51,8 +54,9 @@ Every experiment implements `SPEC.md` identically:
 - **iced**: `window::change_mode(id, window::Mode::Hidden)`
 - **slint**: Return `CloseRequestResponse::HideWindow` from `on_close_requested`
 - **tauri**: `api.prevent_close()` inside `on_window_event` → `WindowEvent::CloseRequested`, then `window.hide()`
+- **dioxus**: `WindowCloseBehaviour::LastWindowHides` in `Config::new()` — the runtime handles hiding automatically
 
-**Tray event polling**: fltk/egui/iced/slint poll `tray-icon` events at ~16 ms via an idle callback, subscription timer, or `slint::Timer`. Tauri uses built-in `on_menu_event` / `on_tray_icon_event` callbacks — no polling needed. The tray icon and menu are built from the same RGBA byte buffer across all crates.
+**Tray event polling**: fltk/egui/iced/slint poll `tray-icon` events at ~16 ms via an idle callback, subscription timer, or `slint::Timer`. Tauri uses built-in `on_menu_event` / `on_tray_icon_event` callbacks — no polling needed. Dioxus uses `use_tray_icon_event_handler` / `use_tray_menu_event_handler` hooks directly in the component — no polling needed. The tray icon and menu are built from the same RGBA byte buffer across all crates.
 
 **egui threading**: eframe stops repainting when hidden, so egui uses a background thread that captures the HWND on first frame (via `raw-window-handle`) and manipulates it independently.
 
@@ -60,7 +64,7 @@ Every experiment implements `SPEC.md` identically:
 
 **Modified flag + title**: Each crate tracks `modified: bool` and `current_path: Option<PathBuf>`, regenerating the title string on every state change.
 
-**Line numbers**: Only fltk has built-in gutter support (`set_linenumber_width`). egui and iced render a separate column of widgets; slint builds a newline-joined string in a fixed-width rectangle; tauri renders a `<div>` alongside the `<textarea>` with scroll-synced `scrollTop`.
+**Line numbers**: Only fltk has built-in gutter support (`set_linenumber_width`). egui and iced render a separate column of widgets; slint builds a newline-joined string in a fixed-width rectangle; tauri and dioxus render a `<div>` alongside `<textarea>` with scroll-synced `scrollTop` (dioxus syncs via `eval()`).
 
 **Discard guard**: Implemented as a pending-action enum (`PendingAction` / `Pending`) stored in state. The dialog confirms, then re-fires the deferred action.
 

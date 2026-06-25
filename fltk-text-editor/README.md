@@ -1,44 +1,37 @@
-# nitrogen-daisy
+# fltk-text-editor
 
-A simple text editor built with Rust and [FLTK](https://github.com/fltk-rs/fltk-rs).
+A minimal text editor built with Rust and [FLTK](https://github.com/fltk-rs/fltk-rs) (fltk-rs 1.x).
 
 ## Features
 
 - Open and save plain text files
-- Basic editing: type, select, cut, copy, paste
-- Unsaved-changes indicator in the title bar
-- Minimal UI — single window, menu bar, text area
+- Line numbers via FLTK's built-in gutter (`set_linenumber_width`)
+- Unsaved-changes indicator in the title bar (`• filename — App`)
+- File menu with New / Open / Save / Save As / Quit and keyboard shortcuts
+- Close button hides the window to the system tray
+- System tray icon (solid blue 32×32); left-click or Show/Hide menu item toggles window visibility
 
 ## Requirements
 
-- Rust 1.70+
-- A C++ compiler (MSVC, GCC, or Clang) — required by the `fltk` crate to build the FLTK library
-
-On Windows the easiest path is to install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and make sure `cl.exe` is on the PATH, or use the MSVC toolchain via `rustup`.
+- Rust 1.85+
+- A C++ compiler — required by `fltk` to compile the FLTK library from source
+  - On Windows: install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and ensure `cl.exe` is on the PATH
 
 ## Build & run
 
-```sh
-cargo run
+```powershell
+cd fltk-text-editor
+cargo run            # debug build (console visible)
+cargo run --release  # release build (no console)
 ```
 
-The first build will compile FLTK from source and take a few minutes. Subsequent builds are fast.
-
-## Usage
-
-| Action | How |
-|---|---|
-| New file | File → New |
-| Open file | File → Open… |
-| Save | File → Save |
-| Save as | File → Save As… |
-| Quit | File → Quit |
+The first build compiles FLTK from source and takes a few minutes. Subsequent builds are fast.
 
 ## Project structure
 
 ```
 src/
-  main.rs   — entry point, window setup, event loop
+  main.rs   — window setup, menu, tray, event loop
 ```
 
 ## License
