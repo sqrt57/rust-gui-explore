@@ -10,6 +10,7 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 | [egui-text-editor](egui-text-editor/) | [egui](https://github.com/emilk/egui) / eframe | Same app re-implemented with egui |
 | [iced-text-editor](iced-text-editor/) | [iced](https://github.com/iced-rs/iced) | Same app re-implemented with iced (Elm architecture) |
 | [slint-text-editor](slint-text-editor/) | [Slint](https://slint.dev) | Same app re-implemented with Slint (declarative .slint markup) |
+| [tauri-text-editor](tauri-text-editor/) | [Tauri](https://tauri.app) | Same app re-implemented with Tauri (WebView2 + Rust backend) |
 
 ## Frameworks on the radar
 
