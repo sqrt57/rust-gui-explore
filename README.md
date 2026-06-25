@@ -6,22 +6,23 @@ A series of self-contained Rust GUI experiments. Each subdirectory is an indepen
 
 | Crate | Toolkit | Description |
 |-------|---------|-------------|
-| [fltk-text-editor](fltk-text-editor/) | [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Minimal text editor with system-tray hide/restore |
-| [egui-text-editor](egui-text-editor/) | [egui](https://github.com/emilk/egui) / eframe | Same app re-implemented with egui |
-| [iced-text-editor](iced-text-editor/) | [iced](https://github.com/iced-rs/iced) | Same app re-implemented with iced (Elm architecture) |
-| [slint-text-editor](slint-text-editor/) | [Slint](https://slint.dev) | Same app re-implemented with Slint (declarative .slint markup) |
-| [tauri-text-editor](tauri-text-editor/) | [Tauri](https://tauri.app) | Same app re-implemented with Tauri (WebView2 + Rust backend) |
-| [dioxus-text-editor](dioxus-text-editor/) | [Dioxus](https://dioxuslabs.com) | Same app re-implemented with Dioxus (React-like components, WebView desktop) |
+| [fltk-text-editor](fltk-text-editor/) | [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Text editor — callback-based, FLTK idle loop |
+| [egui-text-editor](egui-text-editor/) | [egui](https://github.com/emilk/egui) / eframe | Text editor — immediate-mode, background tray thread |
+| [iced-text-editor](iced-text-editor/) | [iced](https://github.com/iced-rs/iced) | Text editor — Elm MVU, async Tasks |
+| [slint-text-editor](slint-text-editor/) | [Slint](https://slint.dev) | Text editor — declarative .slint markup + Rust callbacks |
+| [tauri-text-editor](tauri-text-editor/) | [Tauri](https://tauri.app) | Text editor — WebView2 frontend + Rust command layer |
+| [dioxus-text-editor](dioxus-text-editor/) | [Dioxus](https://dioxuslabs.com) | Text editor — React-like signals, WebView desktop |
 
 ## Frameworks on the radar
 
 | Framework | Approach | Notes |
 |-----------|----------|-------|
-| [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Bindings to FLTK (C++) | Lightweight, fast build, good Win32 integration |
-| [egui](https://github.com/emilk/egui) | Immediate-mode, pure Rust | Easiest to get started; ~13M downloads; API changes between versions |
-| [iced](https://github.com/iced-rs/iced) | Elm-inspired, declarative | Production-ready; powers System76's COSMIC desktop |
-| [Slint](https://slint.dev) | Declarative with own markup | Native rendering; commercial license for closed-source |
-| [Tauri](https://tauri.app) | WebView + Rust backend | Best fit if you want a web frontend; small binaries |
+| [fltk-rs](https://github.com/fltk-rs/fltk-rs) | Bindings to FLTK (C++) | ✓ done — lightweight, fast build, good Win32 integration |
+| [egui](https://github.com/emilk/egui) | Immediate-mode, pure Rust | ✓ done — easiest to get started; ~13M downloads; API changes between versions |
+| [iced](https://github.com/iced-rs/iced) | Elm-inspired, declarative | ✓ done — production-ready; powers System76's COSMIC desktop |
+| [Slint](https://slint.dev) | Declarative with own markup | ✓ done — native rendering; commercial license for closed-source |
+| [Tauri](https://tauri.app) | WebView + Rust backend | ✓ done — best fit if you want a web frontend; small binaries |
+| [Dioxus](https://dioxuslabs.com) | React-like components | ✓ done — desktop + web + mobile from one codebase |
 | [gtk-rs](https://gtk-rs.org) | GTK 4 bindings | Mature; best on Linux; lower-level |
 | [Xilem](https://github.com/linebender/xilem) | SwiftUI/Flutter-inspired | Experimental; API unstable |
 | [floem](https://github.com/lapce/floem) | Reactive, lightweight | Early-stage; from the Lapce editor team |
